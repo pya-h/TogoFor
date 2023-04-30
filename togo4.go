@@ -2,35 +2,63 @@ package main
 
 import (
 	"fmt"
+
 	"time"
 	"strings"
 	"bufio"
 	"log"
 	"os"
+	"database/sql"
+	_ "github.com/mattn/go-sqlite3"
 )
 
+const DATABASE_NAME string = "./togos.db"
+
 type Date struct {time.Time}
-	func (this Date) Get() string {
-		return fmt.Sprintf("%d-%d-%d", this.Year(), this.Month(), this.Day())
+	func (d Date) Get() string {
+
+		return fmt.Sprintf("%d-%d-%d", d.Year(), d.Month(), d.Day())
 	}
 
 
 type Togo struct {
-		id uint64
-		title string
-		description string
-		weight uint16
-		extra bool
-		progress uint8
-		done bool
-		date Date
-		duration time.Duration
+		Id uint64
+		Title string
+		Description string
+		Weight uint16
+		Progress uint8
+		Extra bool
+		Date Date
+		Duration time.Duration
 	}
-	func (this Togo) Info () string {
-		return fmt.Sprintf("Togo #%d) %s:\t%s\nWeight: %d\nExtra: %t\nProgress: %d\nAt: %s, about %.1f minutes\nCompleted: %t",
-		this.id, this.title, this.description, this.weight, this.extra, this.progress, this.date.Get(), this.duration.Minutes(), this.done)
+	func (togo Togo) Info () string {
+		return fmt.Sprintf("Togo #%d) %s:\t%s\nWeight: %d\nExtra: %t\nProgress: %d\nAt: %s, about %.1f minutes",
+		togo.Id, togo.Title, togo.Description, togo.Weight, togo.Extra, togo.Progress, togo.Date.Get(), togo.Duration.Minutes())
 	}
+	func (togo Togo) Save() {
+		const CREATE_TABLE_QUERY string = `CREATE TABLE IF NOT EXISTS togos (id INTEGER NOT NULL PRIMARY KEY,
+			title TEXT NOT NULL, description TEXT, weight INTEGER, extra INTEGER, 
+			progress INTEGER, date DATETIME, duration INTEGER)`
 
+		db, err := sql.Open("sqlite3", DATABASE_NAME)
+
+		if err != nil {
+			panic(err)
+		}
+		defer db.Close()
+		if _, err := db.Exec(CREATE_TABLE_QUERY); err != nil {
+			panic(err)
+		}
+		extra := 0
+		if togo.Extra {
+			extra = 1
+		}
+		if _, err := db.Exec("INSERT INTO togos VALUES (?,?,?,?,?,?,?,?)", togo.Id,
+			togo.Title, togo.Description, togo.Weight, extra, togo.Progress,
+			togo.Date.Time, togo.Duration.Minutes()); err != nil {
+				panic(err)
+			}
+	}
 
 // TogoList:
 type TogoList []Togo
@@ -52,54 +80,49 @@ type TogoList []Togo
 
 
 func isCommand(term string)  bool {
-	return term == "+" || term == "$"
+	return term == "+"
 }
 
 func NewTogo(terms []string, nextID uint64) (togo Togo) {
-	togo.title = terms[0]
-	togo.id = nextID
-	togo.done = false
+	togo.Title = terms[0]
+	togo.Id = nextID
 	num_of_terms := len(terms)
 	for i := 1; i < num_of_terms && !isCommand(terms[i]); i++ {
 		switch terms[i] {
 
 			case "=":
 				i++
-				togo.description = terms[i]
+				togo.Description = terms[i]
 			case "+x":
-				togo.extra = true
+				togo.Extra = true
 			case "-x":
-				togo.extra = false
+				togo.Extra = false
 			case "+p":
 				i++
 				
-				if _, err := fmt.Sscan(terms[i], &togo.progress); err != nil {
+				if _, err := fmt.Sscan(terms[i], &togo.Progress); err != nil {
 					panic(err)
-				} else if togo.progress < 0 {
-					togo.progress = 0
-				} else if togo.progress > 100 {
-					togo.progress = 100
+				} else if togo.Progress > 100 {
+					togo.Progress = 100
 				}
 			case "@":
 				// im++
-				togo.date = Date{time.Now()}
+				togo.Date = Date{time.Now()}
 				// get the actual date here
 			case "->":
 				i++
-				if _, err := fmt.Sscan(terms[i], &togo.duration); err != nil {
+				if _, err := fmt.Sscan(terms[i], &togo.Duration); err != nil {
 					panic(err)
-				} else if togo.duration > 0 {
-					togo.duration *= time.Minute
+				} else if togo.Duration > 0 {
+					togo.Duration *= time.Minute
 				} else {
-					panic("Duration must be positive intsger!")
+					panic("Duration must be positive integer!")
 				}
 			case "+w":
 				i++
 				
-				if _, err := fmt.Sscan(terms[i], &togo.weight); err != nil {
+				if _, err := fmt.Sscan(terms[i], &togo.Weight); err != nil {
 					panic(err)
-				} else if togo.weight < 0 {
-					togo.weight = 0
 				}
 			
 		}
@@ -107,6 +130,36 @@ func NewTogo(terms []string, nextID uint64) (togo Togo) {
 	return
 }
 
+
+func Load() (togos TogoList, err error) {
+	togos = make(TogoList, 0)
+	err = nil
+	if db, e := sql.Open("sqlite3", DATABASE_NAME); e == nil {
+		defer db.Close()
+		const SELECT_QUERY string = "SELECT * FROM togos"
+		rows, e := db.Query(SELECT_QUERY)
+		if e != nil {
+			err = e
+			return
+		}
+		for rows.Next() {
+			var togo Togo
+			var date time.Time
+
+			err = rows.Scan(&togo.Id, &togo.Title, &togo.Description, &togo.Weight, &togo.Extra, &togo.Progress, &date, &togo.Duration)
+			togo.Date = Date{date}
+			togo.Duration *= time.Minute
+			if err != nil {
+				panic(err)
+			}
+			togos = togos.Add(&togo)
+		}
+
+	} else {
+		err = e
+	}
+	return
+}
 
 func main() {
 	// 2nd project to be done
@@ -118,9 +171,12 @@ func main() {
 			log.Fatal("Something fucked up: ", err)
 		}
 	} ()
-	
+
 	reader := bufio.NewReader(os.Stdin)
-	togos := make(TogoList, 0, 0)
+	togos, err := Load()// make(TogoList, 0)
+	if err != nil {
+		fmt.Println("Loading failed: ", err)
+	}
 	for {
 		fmt.Print("> ")
 
@@ -130,13 +186,16 @@ func main() {
 			num_of_terms := len(terms)
 			for i := 0; i < num_of_terms; i++{
 				switch(terms[i]) {
-					case "+":
-						togo := NewTogo(terms[i+1:], togos.NextID())
-						//fmt.Println(togo.Info())
-
-						togos = togos.Add(&togo)
-					case "$":
-						togos.Show()
+				case "+":
+					togo := NewTogo(terms[i+1:], togos.NextID())
+					togos = togos.Add(&togo)
+									
+					togo.Save()
+				case "$":
+					togos.Show()
+				case "><":
+					fmt.Println("Fuck U & Have a nice day.")
+					return
 				}
 			}
 			
