@@ -74,22 +74,44 @@ type TogoList []Togo
 	}
 	func (togos TogoList) NextID() (id uint64) {
 		id = uint64(len(togos)) // temporary
-
+		return
+	}
+	func (togos TogoList) ProgressMade() (progress float64, completedInPercent float64, completed uint64, extra uint64, total uint64) {
+		totalInPercent := uint64(0)
+		for _, togo := range togos {
+			progress += float64(togo.Progress) * float64(togo.Weight)
+			if togo.Progress == 100 {
+				completed++
+				completedInPercent += float64(togo.Progress) * float64(togo.Weight)
+			}
+			if !togo.Extra {
+				totalInPercent += uint64(100 * togo.Weight)
+				total++
+			} else {
+				extra++
+			}
+		}
+		progress *= 100 / float64(totalInPercent)  // CHECK IF IT CALCULAFES DECIMAL PART OR NOT
+		completedInPercent *= 100 / float64(totalInPercent)
 		return
 	}
 
-
 func isCommand(term string)  bool {
-	return term == "+"
+	return term == "+" || term == "%" || term == "#"
 }
 
 func NewTogo(terms []string, nextID uint64) (togo Togo) {
-	togo.Title = terms[0]
+	// setting default values
+	if togo.Title = terms[0]; togo.Title == "" {
+		togo.Title = "Untitled"
+	}
 	togo.Id = nextID
+	togo.Weight = 1
+	togo.Date = Date{time.Now()}
+
 	num_of_terms := len(terms)
 	for i := 1; i < num_of_terms && !isCommand(terms[i]); i++ {
 		switch terms[i] {
-
 			case "=":
 				i++
 				togo.Description = terms[i]
@@ -132,6 +154,7 @@ func NewTogo(terms []string, nextID uint64) (togo Togo) {
 
 
 func Load() (togos TogoList, err error) {
+
 	togos = make(TogoList, 0)
 	err = nil
 	if db, e := sql.Open("sqlite3", DATABASE_NAME); e == nil {
@@ -161,6 +184,7 @@ func Load() (togos TogoList, err error) {
 	return
 }
 
+
 func main() {
 	// 2nd project to be done
 	// while walking the streets
@@ -187,12 +211,25 @@ func main() {
 			for i := 0; i < num_of_terms; i++{
 				switch(terms[i]) {
 				case "+":
-					togo := NewTogo(terms[i+1:], togos.NextID())
-					togos = togos.Add(&togo)
-									
-					togo.Save()
-				case "$":
+					if num_of_terms > 1 {
+
+						togo := NewTogo(terms[i+1:], togos.NextID())
+						togos = togos.Add(&togo)
+						
+						togo.Save()
+					} else {
+						panic("You must provide some values!")
+					}
+				case "#":
 					togos.Show()
+				case "%":
+					progress, completedInPercent, completed, extra, total := togos.ProgressMade()
+					fmt.Printf("Progress: %3.2f%% (%3.2f%% Completed),\nStatistics: %d / %d",
+						progress, completedInPercent, completed, total)
+					if extra > 0 {
+						fmt.Printf("[+%d]\n", extra)
+					}
+					fmt.Println()
 				case "><":
 					fmt.Println("Fuck U & Have a nice day.")
 					return
