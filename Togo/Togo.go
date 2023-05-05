@@ -147,7 +147,14 @@ func NewTogo(terms []string, nextID uint64) (togo Togo) {
 	num_of_terms := len(terms)
 	for i := 1; i < num_of_terms && !isCommand(terms[i]); i++ {
 		switch terms[i] {
-		case "=":
+		case "=", "+w":
+			i++
+
+			if _, err := fmt.Sscan(terms[i], &togo.Weight); err != nil {
+				panic(err)
+			}
+
+		case ":", "+d":
 			i++
 			togo.Description = terms[i]
 		case "+x":
@@ -195,14 +202,8 @@ func NewTogo(terms []string, nextID uint64) (togo Togo) {
 			} else {
 				panic("Duration must be positive integer!")
 			}
-		case "+w":
-			i++
-
-			if _, err := fmt.Sscan(terms[i], &togo.Weight); err != nil {
-				panic(err)
-			}
-
 		}
+
 	}
 	return
 }

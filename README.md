@@ -4,21 +4,31 @@
 
 # Hint
 # +: New Togo:
-... +   title   [=  description]    [+p   progress_till_now]   [+w   weight_of_togo]    [+x | -x]   [@  start_date_as_how_many_days_from_now    start_time_as_hh:mm]    [NEXT_COMMAND]
+=> ... +   title   [=  weight]    [+p   progress_till_now]   [:   description]    [+x | -x]   [@  start_date_as_how_many_days_from_now    start_time_as_hh:mm]    [NEXT_COMMAND]
+
+*   Flags order are optional, and Flags and their params must be seperated by TABS.
+*   weight value can also be set by +w flag
+*   description value can also be set by +d flag
 # #: Show Togos
-... # [NEXT_COMMAND]
+=> ... # [NEXT_COMMAND]
 # %: Progress Made:
-... % [NEXT_COMMAND]
+=> ... % [NEXT_COMMAND]
 
     Calculate the progress been made till now:
+*   ... means that these cammands can also be used after previous command in the same line.
+*   Each line can contain multiple command, as many as you want. Like:
 
-*   Tags order is optional, and tags and their param must be seperated by tabs.
-*   Each line can contain multiple command, as many as you want. for 4x:
-        +   new_togo    @   1   10:00   +p  85  #  +   next_togo   +x  #   %
+=>   +   new_togo    @   1   10:00   +p  85  #  +   next_togo   +x  #   %
+
 *   Extra:
-        +x: its an extra Togo. its not mandatory but has extra points doing it.
-        -x: not extra (default)
+=>        +x: its an extra Togo. its not mandatory but has extra points doing it.
+=>        -x: not extra (default)
 *   all params between [] are optional.
+
+# Remember:
+*   The flag list separator is \t (TAB) character. space character will be evaluated as a part f the current flag's param. do not be mistaken.
+*   in add new togo syntax, all flags are optional except for the title, meaning that you can simply add new togos even with specifying the title only such as:
+=>  +   new togo here
 
 # How to use:
     first install Togo package
