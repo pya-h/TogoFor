@@ -13,8 +13,10 @@
 => ... # [NEXT_COMMAND]
 # %: Progress Made:
 => ... % [NEXT_COMMAND]
-
     Calculate the progress been made till now:
+
+# ><    Exit
+
 *   ... means that these cammands can also be used after previous command in the same line.
 *   Each line can contain multiple command, as many as you want. Like:
 
