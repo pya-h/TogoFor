@@ -11,11 +11,21 @@ import (
 
 const DATABASE_NAME string = "./togos.db"
 
+var last_used_id uint64 = 0
+
 type Date struct{ time.Time }
 
 func (d Date) Get() string {
 
 	return fmt.Sprintf("%d-%d-%d\t%d:%d", d.Year(), d.Month(), d.Day(), d.Hour(), d.Minute())
+}
+func (d Date) Short() string {
+
+	return fmt.Sprintf("%d-%d-%d", d.Year(), d.Month(), d.Day())
+}
+
+func Today() Date {
+	return Date{time.Now()}
 }
 
 // Struct Togo start
@@ -76,6 +86,10 @@ func (these TogoList) Add(new_togo *Togo) TogoList {
 }
 func (togos TogoList) NextID() (id uint64) {
 	id = uint64(len(togos)) // temporary
+	if id < last_used_id {
+		last_used_id++
+		id = last_used_id
+	}
 	return
 }
 func (togos TogoList) ProgressMade() (progress float64, completedInPercent float64, completed uint64, extra uint64, total uint64) {
@@ -100,29 +114,41 @@ func (togos TogoList) ProgressMade() (progress float64, completedInPercent float
 
 // TogoList end
 
-func Load() (togos TogoList, err error) {
+func Load(just_today bool) (togos TogoList, err error) {
 
 	togos = make(TogoList, 0)
 	err = nil
 	if db, e := sql.Open("sqlite3", DATABASE_NAME); e == nil {
 		defer db.Close()
 		const SELECT_QUERY string = "SELECT * FROM togos"
+		/* if just_today {
+			today := Date{time.Now()}
+			next := Date{today.AddDate(0, 0, 1)}
+			fmt.Println(next.Short())
+			SELECT_QUERY = fmt.Sprintf("%s WHERE date >= DATETIME(%s)", SELECT_QUERY, today.Short())//, next.Short())
+			fmt.Println(SELECT_QUERY)
+		}*/
 		rows, e := db.Query(SELECT_QUERY)
 		if e != nil {
 			err = e
 			return
 		}
+		str_today := Today().Short()
 		for rows.Next() {
 			var togo Togo
 			var date time.Time
 
 			err = rows.Scan(&togo.Id, &togo.Title, &togo.Description, &togo.Weight, &togo.Extra, &togo.Progress, &date, &togo.Duration)
+			last_used_id = togo.Id
 			togo.Date = Date{date}
 			togo.Duration *= time.Minute
 			if err != nil {
 				panic(err)
 			}
-			togos = togos.Add(&togo)
+			if !just_today || togo.Date.Short() == str_today {
+
+				togos = togos.Add(&togo)
+			}
 		}
 
 	} else {

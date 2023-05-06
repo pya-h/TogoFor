@@ -10,6 +10,8 @@ import (
 )
 
 func main() {
+	var str_today string = Togo.Today().Short()
+
 	// 2nd project to be done
 	// while walking the streets
 	// Be'sme BigBang =))))))
@@ -21,7 +23,7 @@ func main() {
 	}()
 
 	reader := bufio.NewReader(os.Stdin)
-	togos, err := Togo.Load() // make(Togo.TogoList, 0)
+	togos, err := Togo.Load(true) // load today's togos,  make(Togo.TogoList, 0)
 	if err != nil {
 		fmt.Println("Loading failed: ", err)
 	}
@@ -38,7 +40,9 @@ func main() {
 					if num_of_terms > 1 {
 
 						togo := Togo.NewTogo(terms[i+1:], togos.NextID())
-						togos = togos.Add(&togo)
+						if togo.Date.Short() == str_today {
+							togos = togos.Add(&togo)
+						}
 
 						togo.Save()
 					} else {
@@ -48,7 +52,7 @@ func main() {
 					togos.Show()
 				case "%":
 					progress, completedInPercent, completed, extra, total := togos.ProgressMade()
-					fmt.Printf("Progress: %3.2f%% (%3.2f%% Completed),\nStatistics: %d / %d",
+					fmt.Printf("Today's Progress: %3.2f%% (%3.2f%% Completed),\nStatistics: %d / %d",
 						progress, completedInPercent, completed, total)
 					if extra > 0 {
 						fmt.Printf("[+%d]\n", extra)
