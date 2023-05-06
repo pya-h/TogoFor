@@ -11,9 +11,10 @@
 *   description value can also be set by +d flag
 # #: Show Togos
 => ... # [NEXT_COMMAND]
+    by default shows today's togos
 # %: Progress Made:
 => ... % [NEXT_COMMAND]
-    Calculate the progress been made till now:
+    Calculate the progress been made (by default for Today)
 
 # ><    Exit
 
@@ -31,7 +32,7 @@
 *   The flag list separator is \t (TAB) character. space character will be evaluated as a part f the current flag's param. do not be mistaken.
 *   in add new togo syntax, all flags are optional except for the title, meaning that you can simply add new togos even with specifying the title only such as:
 =>  +   new togo here
-
+*   use -a flag for % and # commands to expand the togos range to ALL Times.
 # How to use:
     first install Togo package
     then:

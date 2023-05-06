@@ -49,11 +49,29 @@ func main() {
 						panic("You must provide some values!")
 					}
 				case "#":
-					togos.Show()
+					if i+1 < num_of_terms && terms[i+1] == "-a" {
+						all_togos, err := Togo.Load(false)
+						if err != nil {
+							panic(err)
+						}
+						all_togos.Show()
+					} else {
+						togos.Show()
+					}
 				case "%":
-					progress, completedInPercent, completed, extra, total := togos.ProgressMade()
-					fmt.Printf("Today's Progress: %3.2f%% (%3.2f%% Completed),\nStatistics: %d / %d",
-						progress, completedInPercent, completed, total)
+					var target *Togo.TogoList = &togos
+					scope := "Today's"
+					if i+1 < num_of_terms && terms[i+1] == "-a" {
+						all_togos, err := Togo.Load(false)
+						if err != nil {
+							panic(err)
+						}
+						target = &all_togos
+						scope = "Total"
+					}
+					progress, completedInPercent, completed, extra, total := (*target).ProgressMade()
+					fmt.Printf("%s Progress: %3.2f%% (%3.2f%% Completed),\nStatistics: %d / %d",
+						scope, progress, completedInPercent, completed, total)
 					if extra > 0 {
 						fmt.Printf("[+%d]\n", extra)
 					}

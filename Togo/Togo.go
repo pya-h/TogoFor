@@ -139,7 +139,9 @@ func Load(just_today bool) (togos TogoList, err error) {
 			var date time.Time
 
 			err = rows.Scan(&togo.Id, &togo.Title, &togo.Description, &togo.Weight, &togo.Extra, &togo.Progress, &date, &togo.Duration)
-			last_used_id = togo.Id
+			if last_used_id < togo.Id {
+				last_used_id = togo.Id
+			}
 			togo.Date = Date{date}
 			togo.Duration *= time.Minute
 			if err != nil {
