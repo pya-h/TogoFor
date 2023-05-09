@@ -1,4 +1,4 @@
-# Togo4
+# Togo4: 2nd Street Project
     Simple console app for managing my todos, in order to make me go for them.
 # Language: GO
 
@@ -40,3 +40,6 @@
     go mod init togo4
     go mod tidy
     go run togo4.go
+    
+# P.S.:
+	Street Project, means that this one is also coded while walking the streets.
