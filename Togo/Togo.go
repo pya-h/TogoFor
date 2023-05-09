@@ -1,8 +1,11 @@
 package Togo
 
 import (
+	"chrono"
+	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -12,6 +15,8 @@ import (
 const DATABASE_NAME string = "./togos.db"
 
 var last_used_id uint64 = 0
+
+var taskScheduler chrono.TaskScheduler = chrono.NewDefaultTaskScheduler()
 
 type Date struct{ time.Time }
 
@@ -68,6 +73,19 @@ func (togo Togo) Save() {
 		panic(err)
 	}
 }
+func (togo Togo) Schedule() {
+	_, err := taskScheduler.Schedule(func(ctx context.Context) {
+		fmt.Println("\nYour Next Togo:\n", togo.Info(), "\n> ")
+		fmt.Print()
+	}, chrono.WithTime(togo.Date.Time))
+
+	if err != nil {
+		panic(err)
+	} else {
+		log.Println("Togo: ", togo.Title, " Successfully scheduled for: ", togo.Date.Get())
+	}
+
+}
 
 // Struct Togo end
 
@@ -120,6 +138,8 @@ func Load(just_today bool) (togos TogoList, err error) {
 	err = nil
 	if db, e := sql.Open("sqlite3", DATABASE_NAME); e == nil {
 		defer db.Close()
+		// ***** BETTER ALGORITHM
+		// FIRST GET THE COUNT OF ROWS, then create a slice of that size and then load into that.
 		const SELECT_QUERY string = "SELECT * FROM togos"
 		/* if just_today {
 			today := Date{time.Now()}
@@ -133,7 +153,8 @@ func Load(just_today bool) (togos TogoList, err error) {
 			err = e
 			return
 		}
-		str_today := Today().Short()
+
+		now := Today()
 		for rows.Next() {
 			var togo Togo
 			var date time.Time
@@ -147,8 +168,12 @@ func Load(just_today bool) (togos TogoList, err error) {
 			if err != nil {
 				panic(err)
 			}
-			if !just_today || togo.Date.Short() == str_today {
-
+			if togo.Date.Short() == now.Short() {
+				if togo.Date.After(now.Time) {
+					togo.Schedule()
+				}
+				togos = togos.Add(&togo)
+			} else if !just_today {
 				togos = togos.Add(&togo)
 			}
 		}
@@ -163,7 +188,7 @@ func isCommand(term string) bool {
 	return term == "+" || term == "%" || term == "#"
 }
 
-func NewTogo(terms []string, nextID uint64) (togo Togo) {
+func Extract(terms []string, nextID uint64) (togo Togo) {
 	// setting default values
 	if togo.Title = terms[0]; togo.Title == "" {
 		togo.Title = "Untitled"

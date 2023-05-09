@@ -10,8 +10,6 @@ import (
 )
 
 func main() {
-	var str_today string = Togo.Today().Short()
-
 	// 2nd project to be done
 	// while walking the streets
 	// Be'sme BigBang =))))))
@@ -34,14 +32,18 @@ func main() {
 			input = input[:len(input)-1] // remove '\n' char from the end of string
 			terms := strings.Split(input, "\t")
 			num_of_terms := len(terms)
+			var now Togo.Date = Togo.Today()
 			for i := 0; i < num_of_terms; i++ {
 				switch terms[i] {
 				case "+":
 					if num_of_terms > 1 {
 
-						togo := Togo.NewTogo(terms[i+1:], togos.NextID())
-						if togo.Date.Short() == str_today {
+						togo := Togo.Extract(terms[i+1:], togos.NextID())
+						if togo.Date.Short() == now.Short() {
 							togos = togos.Add(&togo)
+							if togo.Date.After(now.Time) {
+								togo.Schedule()
+							}
 						}
 
 						togo.Save()
