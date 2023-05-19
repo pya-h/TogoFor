@@ -3,12 +3,28 @@ package main
 import (
 	"Togo"
 	"bufio"
+	"chrono"
+	"context"
 	"fmt"
 	"log"
 	"os"
 	"strings"
+	"time"
 )
 
+var mainTaskScheduler chrono.TaskScheduler = chrono.NewDefaultTaskScheduler()
+
+func autoLoad(togos *Togo.TogoList) {
+	tg, err := Togo.Load(true) // load today's togos,  make(Togo.TogoList, 0)
+	if err != nil {
+		fmt.Println("Loading failed: ", err)
+	}
+	*togos = tg
+	today := time.Now()
+	mainTaskScheduler.Schedule(func(ctx context.Context) { autoLoad(togos) },
+		chrono.WithStartTime(today.Year(), today.Month(), today.Day()+1, 0, 0, 0))
+
+}
 func main() {
 	// 2nd project to be done
 	// while walking the streets
@@ -21,10 +37,12 @@ func main() {
 	}()
 
 	reader := bufio.NewReader(os.Stdin)
-	togos, err := Togo.Load(true) // load today's togos,  make(Togo.TogoList, 0)
+	/*togos, err := Togo.Load(true) // load today's togos,  make(Togo.TogoList, 0)
 	if err != nil {
 		fmt.Println("Loading failed: ", err)
-	}
+	}*/
+	var togos Togo.TogoList
+	autoLoad(&togos)
 	for {
 		fmt.Print("> ")
 
