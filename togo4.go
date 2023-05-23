@@ -37,10 +37,7 @@ func main() {
 	}()
 
 	reader := bufio.NewReader(os.Stdin)
-	/*togos, err := Togo.Load(true) // load today's togos,  make(Togo.TogoList, 0)
-	if err != nil {
-		fmt.Println("Loading failed: ", err)
-	}*/
+
 	var togos Togo.TogoList
 	autoLoad(&togos)
 	for {
@@ -96,6 +93,10 @@ func main() {
 						fmt.Printf("[+%d]\n", extra)
 					}
 					fmt.Println()
+				case "$":
+					// set or update a togo
+					// only for today togos
+					togos.Update(terms[i+1:])
 				case "><":
 					fmt.Println("Fuck U & Have a nice day.")
 					return

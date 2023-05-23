@@ -10,12 +10,16 @@
 *   weight value can also be set by +w flag
 *   description value can also be set by +d flag
 # #: Show Togos
-=> ... # [NEXT_COMMAND]
+=> ...	#	[NEXT_COMMAND]
     by default shows today's togos
 # %: Progress Made:
-=> ... % [NEXT_COMMAND]
+=> ...	%	[NEXT_COMMAND]
     Calculate the progress been made (by default for Today)
 
+# $: Get and Update a togo of today
+=> ... $	id	[NEXT_COMMAND]
+*	this will get and show a togo (just in today)
+=> ... $	id	[=  weight]    [+p   progress_till_now]   [:   description]    [+x | -x]   [@  start_date_as_how_many_days_from_now    start_time_as_hh:mm]    [NEXT_COMMAND]
 # ><    Exit
 
 *   ... means that these cammands can also be used after previous command in the same line.

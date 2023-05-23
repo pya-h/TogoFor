@@ -87,6 +87,99 @@ func (togo Togo) Schedule() {
 
 }
 
+func isCommand(term string) bool {
+	return term == "+" || term == "%" || term == "#" || term == "$"
+}
+
+func (togo *Togo) setFields(terms []string) {
+	num_of_terms := len(terms)
+	for i := 1; i < num_of_terms && !isCommand(terms[i]); i++ {
+		switch terms[i] {
+		case "=", "+w":
+			i++
+
+			if _, err := fmt.Sscan(terms[i], &togo.Weight); err != nil {
+				panic(err)
+			}
+
+		case ":", "+d":
+			i++
+			togo.Description = terms[i]
+		case "+x":
+			togo.Extra = true
+		case "-x":
+			togo.Extra = false
+		case "+p":
+			i++
+
+			if _, err := fmt.Sscan(terms[i], &togo.Progress); err != nil {
+				panic(err)
+			} else if togo.Progress > 100 {
+				togo.Progress = 100
+			}
+		case "@":
+			// im++
+			i++
+			today := time.Now()
+			var delta int
+			if _, err := fmt.Sscan(terms[i], &delta); err != nil {
+				panic(err)
+			}
+			today = today.AddDate(0, 0, delta)
+			i++
+			temp := strings.Split(terms[i], ":")
+			var hour, min int
+			if _, err := fmt.Sscan(temp[0], &hour); err != nil {
+				panic(err)
+			} else if hour >= 24 || hour < 0 {
+				panic("Hour part must be between 0 and 23!")
+			}
+			if _, err := fmt.Sscan(temp[1], &min); err != nil {
+				panic(err)
+			} else if min >= 60 || min < 0 {
+				panic("Minute part must be between 0 and 59!")
+			}
+			togo.Date = Date{time.Date(today.Year(), today.Month(), today.Day(), hour, min, 0, 0, time.Local)}
+			// get the actual date here
+		case "->":
+			i++
+			if _, err := fmt.Sscan(terms[i], &togo.Duration); err != nil {
+				panic(err)
+			} else if togo.Duration > 0 {
+				togo.Duration *= time.Minute
+			} else {
+				panic("Duration must be positive integer!")
+			}
+		}
+
+	}
+
+}
+
+func (togo Togo) Update() {
+	db, err := sql.Open("sqlite3", DATABASE_NAME)
+
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	extra := 0
+	if togo.Extra {
+		extra = 1
+	}
+	if _, err := db.Exec("UPDATE togos SET description=?, weight=?, extra=?, progress=?, date=?, duration=? WHERE id=?",
+		togo.Description, togo.Weight, extra, togo.Progress,
+		togo.Date.Time, togo.Duration.Minutes(), togo.Id); err != nil {
+		panic(err)
+	}
+}
+
+func (togo Togo) Show() {
+	fmt.Println(togo.Info())
+	fmt.Println("-----------------------------------------------")
+}
+
 // Struct Togo end
 
 // TogoList start
@@ -95,8 +188,7 @@ type TogoList []Togo
 func (these TogoList) Show() {
 	fmt.Println("------------------------------------------------")
 	for _, el := range these {
-		fmt.Println(el.Info())
-		fmt.Println("-----------------------------------------------")
+		el.Show()
 	}
 }
 func (these TogoList) Add(new_togo *Togo) TogoList {
@@ -184,8 +276,28 @@ func Load(just_today bool) (togos TogoList, err error) {
 	return
 }
 
-func isCommand(term string) bool {
-	return term == "+" || term == "%" || term == "#"
+func (togos TogoList) Update(terms []string) {
+	var id uint64
+	if _, err := fmt.Sscan(terms[0], &id); err != nil {
+		panic(err)
+	}
+	targetIdx := -1
+	for index, togo := range togos {
+		if togo.Id == id {
+			targetIdx = index
+			break
+		}
+	}
+	if targetIdx < 0 {
+		panic("There is no togo with this Id!")
+	}
+	if len(terms) > 1 && !isCommand(terms[1]) {
+
+		togos[targetIdx].setFields(terms)
+		togos[targetIdx].Update()
+	}
+
+	togos[targetIdx].Show()
 }
 
 func Extract(terms []string, nextID uint64) (togo Togo) {
@@ -196,67 +308,6 @@ func Extract(terms []string, nextID uint64) (togo Togo) {
 	togo.Id = nextID
 	togo.Weight = 1
 	togo.Date = Date{time.Now()}
-
-	num_of_terms := len(terms)
-	for i := 1; i < num_of_terms && !isCommand(terms[i]); i++ {
-		switch terms[i] {
-		case "=", "+w":
-			i++
-
-			if _, err := fmt.Sscan(terms[i], &togo.Weight); err != nil {
-				panic(err)
-			}
-
-		case ":", "+d":
-			i++
-			togo.Description = terms[i]
-		case "+x":
-			togo.Extra = true
-		case "-x":
-			togo.Extra = false
-		case "+p":
-			i++
-
-			if _, err := fmt.Sscan(terms[i], &togo.Progress); err != nil {
-				panic(err)
-			} else if togo.Progress > 100 {
-				togo.Progress = 100
-			}
-		case "@":
-			// im++
-			i++
-			today := time.Now()
-			var delta int
-			if _, err := fmt.Sscan(terms[i], &delta); err != nil {
-				panic(err)
-			}
-			today = today.AddDate(0, 0, delta)
-			i++
-			temp := strings.Split(terms[i], ":")
-			var hour, min int
-			if _, err := fmt.Sscan(temp[0], &hour); err != nil {
-				panic(err)
-			} else if hour >= 24 || hour < 0 {
-				panic("Hour part must be between 0 and 23!")
-			}
-			if _, err := fmt.Sscan(temp[1], &min); err != nil {
-				panic(err)
-			} else if min >= 60 || min < 0 {
-				panic("Minute part must be between 0 and 59!")
-			}
-			togo.Date = Date{time.Date(today.Year(), today.Month(), today.Day(), hour, min, 0, 0, time.Local)}
-			// get the actual date here
-		case "->":
-			i++
-			if _, err := fmt.Sscan(terms[i], &togo.Duration); err != nil {
-				panic(err)
-			} else if togo.Duration > 0 {
-				togo.Duration *= time.Minute
-			} else {
-				panic("Duration must be positive integer!")
-			}
-		}
-
-	}
+	(&togo).setFields(terms)
 	return
 }
